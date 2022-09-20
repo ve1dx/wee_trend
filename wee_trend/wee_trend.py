@@ -374,10 +374,6 @@ def main():
 
         if mode == 'interactive':
             run_interactive(month_list, int_month, location, plot_path, missing_allowed, verbose_level)
-
-        # batch is in the 'endless' loop because, while it will run
-        # to completion and exit, we want to catch a ctrl-C interrupt
-        while True:
             run_batch(month_list, location, plot_path, missing_allowed, verbose_level)
     except KeyboardInterrupt:
         print()
