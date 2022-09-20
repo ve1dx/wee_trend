@@ -5,11 +5,11 @@ A program to look for trends in weewx generated NOAA files. The results may not 
 Requires Python version 3.5 or higher and has been tested on Debian 11 (64-bit), Ubuntu 22.04 and MAC OS X (macOS Monterey 12.5.1). This program should run on Windows equipped with Python 3.5 or later. It is designed to analyze the output of weewx. The user must transfer the weewx NOAA files from a weewx install if run on a different system.
 
 
-To install, download weather_trend-main.zip, and extract and install it:
+To install, download wee_trend-main.zip, and extract and install it:
 
-unzip weather_trend-main.zip
+unzip wee_trend-main.zip
 
-cd weather_trend-main
+cd wee_trend-main
 
 pip install -e .
 
