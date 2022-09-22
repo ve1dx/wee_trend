@@ -159,7 +159,7 @@ def check_for_complete_month(year, month, df, miss_days):
     return n_valid_days >= valid_days
 
 
-def process_months(month_list, requested_column, requested_month, tolerance, verbosity):
+def process_months(month_list, requested_column, requested_month, tolerance, verbosity, incomplete_months):
     df = load_months(month_list)
     years = sorted(set(df.index.year.to_list()))
     unit_key = get_units(month_list[0])
@@ -167,13 +167,17 @@ def process_months(month_list, requested_column, requested_month, tolerance, ver
     years_out, values_out = [], []
     for year in years:
         df1 = df.loc[(df.index.month == requested_month) & (df.index.year == year)]
-        if not check_for_complete_month(year, requested_month, df1, tolerance):
-            dropped += 1
-            if verbosity == 1:
-                print("Working on month", get_month_name(requested_month, False), flush=True)
-                print("Tolerance for missing days is", tolerance, flush=True)
-                print("Data for {}-{:02d} incomplete, dropping it".format(year, requested_month), flush=True)
-                print("Number of", get_month_name(requested_month, False), "months dropped =", dropped)
+        should_keep = check_for_complete_month(year, requested_month, df1, tolerance)
+        test_month = '{}-{:02d}'.format(year, requested_month)
+        if not should_keep:
+            if test_month not in incomplete_months:
+                incomplete_months.append(test_month)
+                dropped += 1
+                if verbosity == 1:
+                    print("Working on month", test_month, flush=True)
+                    print("Tolerance for missing days is", tolerance, flush=True)
+                    print("Data for {}-{:02d} incomplete, dropping it".format(year, requested_month), flush=True)
+                    print("Number of", get_month_name(requested_month, False), "months dropped =", dropped)
             continue
         # Only the temperature range is a calculated value The rest are
         # extracted from the dataframe.
@@ -258,10 +262,11 @@ def python_check():
 
 
 def run_interactive(mnth_list, int_month, locn, p_path, tolerate, verbosity):
+    incomplete_months = []
     while True:
         heading_variable, plot_title, int_month = menu(int_month, wtdata.menudata, locn)
         df, u_key, dumped = process_months(mnth_list, heading_variable, int_month, tolerate,
-                                           verbosity)
+                                           verbosity, incomplete_months)
         x = df["Year"]
         y = df["Mth"]
         plot_graph(x, y, plot_title, p_path, u_key)
@@ -272,6 +277,7 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
     print("Processing all combinations within NOAA files in batch mode. This may take a moment.")
     print()
     total_dumped = 0
+    incomplete_months = []
     for month in wtdata.batchmonth:
         txt_month = get_month_name(month, False)
         for option in wtdata.batchoptions:
@@ -279,7 +285,7 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
                 print("Processing month", txt_month, flush=True)
             heading_variable, plot_title = make_heading_title(option, txt_month, loc)
             df, u_key, dumped = process_months(mnth_list, heading_variable, month, tolerate,
-                                               verbose_extent)
+                                               verbose_extent, incomplete_months)
             x = df["Year"]
             y = df["Mth"]
             if verbose_extent == 0:
