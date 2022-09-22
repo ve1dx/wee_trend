@@ -366,6 +366,10 @@ def main():
         if not os.path.exists(data_path):
             print("NOAA directory", data_path, "does not exist. Exiting program.")
             sys.exit(0)
+        glob_string = data_path + 'NOAA-????-??.txt'
+        if not glob.glob(glob_string):
+            print("No NOAA files found in", data_path, "Exiting program.")
+            sys.exit(0)
         if not os.path.exists(plot_path):
             print("PLOT directory", plot_path, "does not exist. Creating it.")
             os.makedirs(plot_path, exist_ok=True)
