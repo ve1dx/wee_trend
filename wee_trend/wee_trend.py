@@ -261,8 +261,9 @@ def python_check():
         sys.exit(0)
 
 
-def run_interactive(mnth_list, int_month, locn, p_path, tolerate, verbosity):
+def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
     incomplete_months = []
+    int_month, text_mnth = get_month()
     while True:
         heading_variable, plot_title, int_month = menu(int_month, wtdata.menudata, locn)
         df, u_key, dumped = process_months(mnth_list, heading_variable, int_month, tolerate,
@@ -373,8 +374,6 @@ def main():
         if not os.path.exists(plot_path):
             print("PLOT directory", plot_path, "does not exist. Creating it.")
             os.makedirs(plot_path, exist_ok=True)
-        if mode == 'interactive':
-            int_month, text_mnth = get_month()
         month_list, the_loc = get_month_list(data_path)
         if location == "NOAA_file":
             location = the_loc
@@ -383,7 +382,7 @@ def main():
             sys.exit(0)
 
         if mode == 'interactive':
-            run_interactive(month_list, int_month, location, plot_path, missing_allowed, verbose_level)
+            run_interactive(month_list, location, plot_path, missing_allowed, verbose_level)
         run_batch(month_list, location, plot_path, missing_allowed, verbose_level)
     except KeyboardInterrupt:
         print()
