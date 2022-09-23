@@ -103,11 +103,11 @@ def get_month():
 
 
 def get_month_list(the_path):
-    glob_string = the_path + 'NOAA-????-??.txt'
-    if not glob.glob(glob_string):
+    glob_string = os.path.join(the_path, 'NOAA-????-??.txt')
+    master_list = glob.glob(glob_string)
+    if len(master_list) == 0:
         print("No NOAA files found in", the_path, "Exiting program.")
         sys.exit(0)
-    master_list = glob.glob(os.path.join(the_path, glob_string))
     master_list.sort()
     with open(master_list[0], "r") as in_file:
         data = in_file.readlines()
