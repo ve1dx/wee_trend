@@ -103,8 +103,11 @@ def get_month():
 
 
 def get_month_list(the_path):
-    globstring = "NOAA-????-??.txt"
-    master_list = glob.glob(os.path.join(the_path, globstring))
+    glob_string = the_path + 'NOAA-????-??.txt'
+    if not glob.glob(glob_string):
+        print("No NOAA files found in", the_path, "Exiting program.")
+        sys.exit(0)
+    master_list = glob.glob(os.path.join(the_path, glob_string))
     master_list.sort()
     with open(master_list[0], "r") as in_file:
         data = in_file.readlines()
@@ -368,20 +371,12 @@ def main():
         if not os.path.exists(data_path):
             print("NOAA directory", data_path, "does not exist. Exiting program.")
             sys.exit(0)
-        glob_string = data_path + 'NOAA-????-??.txt'
-        if not glob.glob(glob_string):
-            print("No NOAA files found in", data_path, "Exiting program.")
-            sys.exit(0)
         if not os.path.exists(plot_path):
             print("PLOT directory", plot_path, "does not exist. Creating it.")
             os.makedirs(plot_path, exist_ok=True)
         month_list, the_loc = get_month_list(data_path)
         if location == "NOAA_file":
             location = the_loc
-        if len(month_list) == 0:
-            print("No NOAA files found in", data_path, "Exiting program.")
-            sys.exit(0)
-
         if mode == 'interactive':
             run_interactive(month_list, location, plot_path, missing_allowed, verbose_level)
         run_batch(month_list, location, plot_path, missing_allowed, verbose_level)
