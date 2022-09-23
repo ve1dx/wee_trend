@@ -159,8 +159,7 @@ def check_for_complete_month(year, month, df, miss_days):
     return n_valid_days >= valid_days
 
 
-def process_months(month_list, requested_column, requested_month, tolerance, verbosity, incomplete_months):
-    df = load_months(month_list)
+def process_months(df, month_list, requested_column, requested_month, tolerance, verbosity, incomplete_months):
     years = sorted(set(df.index.year.to_list()))
     unit_key = get_units(month_list[0])
     dropped = 0
@@ -264,12 +263,13 @@ def python_check():
 def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
     incomplete_months = []
     int_month, text_mnth = get_month()
+    df = load_months(mnth_list)
     while True:
         heading_variable, plot_title, int_month = menu(int_month, wtdata.menudata, locn)
-        df, u_key, dumped = process_months(mnth_list, heading_variable, int_month, tolerate,
-                                           verbosity, incomplete_months)
-        x = df["Year"]
-        y = df["Mth"]
+        dfx, u_key, dumped = process_months(df, mnth_list, heading_variable, int_month, tolerate,
+                                            verbosity, incomplete_months)
+        x = dfx["Year"]
+        y = dfx["Mth"]
         plot_graph(x, y, plot_title, p_path, u_key)
 
 
@@ -279,16 +279,17 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
     print()
     total_dumped = 0
     incomplete_months = []
+    df = load_months(mnth_list)
     for month in wtdata.batchmonth:
         txt_month = get_month_name(month, False)
         for option in wtdata.batchoptions:
             if verbose_extent == 1:
                 print("Processing month", txt_month, flush=True)
             heading_variable, plot_title = make_heading_title(option, txt_month, loc)
-            df, u_key, dumped = process_months(mnth_list, heading_variable, month, tolerate,
-                                               verbose_extent, incomplete_months)
-            x = df["Year"]
-            y = df["Mth"]
+            dfx, u_key, dumped = process_months(df, mnth_list, heading_variable, month, tolerate,
+                                                verbose_extent, incomplete_months)
+            x = dfx["Year"]
+            y = dfx["Mth"]
             if verbose_extent == 0:
                 print(". ", end="", flush=True)
             plot_graph(x, y, plot_title, p_path, u_key)
