@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Paul Dunphy , Dr Michael Dunphy- 2022
+# Paul Dunphy, Dr Michael Dunphy- 2022
 #
 
 import wee_trend.wee_trenddata as wtdata
@@ -35,7 +35,7 @@ def get_choice(prompt, lo, hi):
 
 
 def menu(int_month, men_data, loc):
-    text_month = get_month_name(int_month, abbr=False)
+    text_month = calendar.month_name[int_month]
     lo, hi = 1, 12
     print()
     print()
@@ -56,14 +56,14 @@ def menu(int_month, men_data, loc):
 
 
 def print_menu(i_mnth, men_data):
-    text_mnth = get_month_name(i_mnth, abbr=False)
+    text_mnth = calendar.month_name[i_mnth]
     print(text_mnth, "selected")
     for key in men_data:
         print(key, "--", men_data[key]["description"])
 
 
 def option11(i_mnth):
-    text_month = get_month_name(i_mnth, abbr=False)
+    text_month = calendar.month_name[i_mnth]
     print()
     print()
     print("Switched month to", text_month, flush=True)
@@ -88,17 +88,10 @@ def make_heading_title(number, txt_month, locn):
         )
 
 
-def get_month_name(proc_mnth, abbr=False):
-    if abbr:
-        return calendar.month_abbr[proc_mnth]
-    else:
-        return calendar.month_name[proc_mnth]
-
-
 def get_month():
     lo, hi = 1, 12
     input_mnth = get_choice("Enter month (1-12)", lo, hi)
-    m_name = get_month_name(input_mnth, abbr=False)
+    m_name = calendar.month_name[input_mnth]
     return input_mnth, m_name
 
 
@@ -123,15 +116,21 @@ def get_units(first_file):
     unit_line = temp_data[7]
     precp_unit = unit_line[42:44]
     if precp_unit == 'in':
-        unit_key = 'US'
+        wtdata.units[0] = wtdata.unitdata['US']["temp"]
+        wtdata.units[1] = wtdata.unitdata['US']["precip"]
+        wtdata.units[2] = wtdata.unitdata['US']["speed"]
     elif precp_unit == 'mm':
-        unit_key = 'METRICWX'
+        wtdata.units[0] = wtdata.unitdata['METRICWX']["temp"]
+        wtdata.units[1] = wtdata.unitdata['METRICWX']["precip"]
+        wtdata.units[2] = wtdata.unitdata['METRICWX']["speed"]
     elif precp_unit == 'cm':
-        unit_key = 'METRIC'
+        wtdata.units[0] = wtdata.unitdata['METRIC']["temp"]
+        wtdata.units[1] = wtdata.unitdata['METRIC']["precip"]
+        wtdata.units[2] = wtdata.unitdata['METRIC']["speed"]
     else:
         print("Unable to determine units. Please check NOAA files for correct format")
         sys.exit(0)
-    return unit_key
+    return
 
 
 def load_months(month_list):
@@ -155,21 +154,22 @@ def load_months(month_list):
     return dfout
 
 
-def check_for_complete_month(year, month, df, miss_days):
+def check_for_complete_month(year, month, current_month_df, miss_days):
     _, mnth_days = calendar.monthrange(year, month)
     valid_days = mnth_days - miss_days
-    n_valid_days = np.sum(~df.isna().any(axis=1))
+    n_valid_days = np.sum(~current_month_df.isna().any(axis=1))
     return n_valid_days >= valid_days
 
 
-def process_months(df, month_list, requested_column, requested_month, tolerance, verbosity, incomplete_months):
-    years = sorted(set(df.index.year.to_list()))
-    unit_key = get_units(month_list[0])
+def process_months(all_data_df, month_list, requested_column, requested_month, tolerance,
+                   verbosity, incomplete_months):
+    years = sorted(set(all_data_df.index.year.to_list()))
+    get_units(month_list[0])
     dropped = 0
     years_out, values_out = [], []
     for year in years:
-        df1 = df.loc[(df.index.month == requested_month) & (df.index.year == year)]
-        should_keep = check_for_complete_month(year, requested_month, df1, tolerance)
+        month_df = all_data_df.loc[(all_data_df.index.month == requested_month) & (all_data_df.index.year == year)]
+        should_keep = check_for_complete_month(year, requested_month, month_df, tolerance)
         test_month = '{}-{:02d}'.format(year, requested_month)
         if not should_keep:
             if test_month not in incomplete_months:
@@ -179,20 +179,20 @@ def process_months(df, month_list, requested_column, requested_month, tolerance,
                     print("Working on month", test_month, flush=True)
                     print("Tolerance for missing days is", tolerance, flush=True)
                     print("Data for {}-{:02d} incomplete, dropping it".format(year, requested_month), flush=True)
-                    print("Number of", get_month_name(requested_month, False), "months dropped =", dropped)
+                    print("Number of", calendar.month_name[requested_month], "months dropped =", dropped)
             continue
-        # Only the temperature range is a calculated value The rest are
-        # extracted from the dataframe.
+        # Only the temperature range is a calculated value. The rest are
+        # extracted from the specified month's dataframe.
         if requested_column == "TEMP_RANGE":
-            value = df1["HIGH_TEMP"].max() - df1["LOW_TEMP"].min()
+            value = month_df["HIGH_TEMP"].max() - month_df["LOW_TEMP"].min()
         elif requested_column in ["MEAN_TEMP", "AVG_WIND_SPEED", "DOMINANT_WIND_DIRECTION"]:
-            value = df1[requested_column].mean()
+            value = month_df[requested_column].mean()
         elif requested_column in ["HIGH_TEMP", "HIGH_WIND_GUST"]:
-            value = df1[requested_column].max()
+            value = month_df[requested_column].max()
         elif requested_column in ["LOW_TEMP"]:
-            value = df1[requested_column].min()
+            value = month_df[requested_column].min()
         elif requested_column in ["HEAT_DEG_DAYS", "COOL_DEG_DAYS", "PRECIPITATION"]:
-            value = df1[requested_column].sum()
+            value = month_df[requested_column].sum()
         else:
             print("Can only process items specified in the menu.")
             print("Exiting program with no processing")
@@ -200,17 +200,17 @@ def process_months(df, month_list, requested_column, requested_month, tolerance,
         years_out += [year]
         values_out += [value]
 
-    # Put data into output dataframe
-    dfx = pd.DataFrame({"int": years_out, "float": values_out})
-    dfx.columns = ["Year", "Mth"]
-    dfx['Mth'] = dfx['Mth'].replace(np.nan, 0.0)
-    return dfx, unit_key, dropped
+    # Put data into a dataframe ready to plot
+    plot_prep_df = pd.DataFrame({"int": years_out, "float": values_out})
+    plot_prep_df.columns = ["Year", "Mth"]
+    plot_prep_df['Mth'] = plot_prep_df['Mth'].replace(np.nan, 0.0)
+    return plot_prep_df, dropped
 
 
-def plot_graph(xvals, yvals, title, p_path, unit_key):
-    t_uts = wtdata.unitdata[unit_key]["temp"]
-    p_uts = wtdata.unitdata[unit_key]["precip"]
-    s_uts = wtdata.unitdata[unit_key]["speed"]
+def plot_graph(xvals, yvals, title, p_path):
+    t_uts = wtdata.units[0]
+    p_uts = wtdata.units[1]
+    s_uts = wtdata.units[2]
     plt.cla()
     plt.xlabel("Year")
     if "Direction" in title:
@@ -266,14 +266,15 @@ def python_check():
 def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
     incomplete_months = []
     int_month, text_mnth = get_month()
-    df = load_months(mnth_list)
+    all_available_data_df = load_months(mnth_list)
     while True:
         heading_variable, plot_title, int_month = menu(int_month, wtdata.menudata, locn)
-        dfx, u_key, dumped = process_months(df, mnth_list, heading_variable, int_month, tolerate,
-                                            verbosity, incomplete_months)
-        x = dfx["Year"]
-        y = dfx["Mth"]
-        plot_graph(x, y, plot_title, p_path, u_key)
+        plot_ready_df, dumped = process_months(all_available_data_df, mnth_list,
+                                               heading_variable, int_month, tolerate, verbosity,
+                                               incomplete_months)
+        x = plot_ready_df["Year"]
+        y = plot_ready_df["Mth"]
+        plot_graph(x, y, plot_title, p_path)
 
 
 def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
@@ -282,20 +283,20 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
     print()
     total_dumped = 0
     incomplete_months = []
-    df = load_months(mnth_list)
+    all_available_data_df = load_months(mnth_list)
     for month in wtdata.batchmonth:
-        txt_month = get_month_name(month, False)
+        txt_month = calendar.month_name[month]
         for option in wtdata.batchoptions:
             if verbose_extent == 1:
                 print("Processing month", txt_month, flush=True)
             heading_variable, plot_title = make_heading_title(option, txt_month, loc)
-            dfx, u_key, dumped = process_months(df, mnth_list, heading_variable, month, tolerate,
-                                                verbose_extent, incomplete_months)
-            x = dfx["Year"]
-            y = dfx["Mth"]
+            plot_ready_df, dumped = process_months(all_available_data_df, mnth_list, heading_variable,
+                                                   month, tolerate, verbose_extent, incomplete_months)
+            x = plot_ready_df["Year"]
+            y = plot_ready_df["Mth"]
             if verbose_extent == 0:
                 print(". ", end="", flush=True)
-            plot_graph(x, y, plot_title, p_path, u_key)
+            plot_graph(x, y, plot_title, p_path)
             total_dumped = total_dumped + dumped
     print()
     print()
@@ -335,9 +336,10 @@ def main():
                                default=plot_path,
                                )
         my_parser.add_argument('-l', '--location',
-                               help='Location for plot headings (default is taken from NOAA files, suppress with NONE)',
+                               help='Location for plot headings (default is NOAA files, suppress with NONE)',
+                               choices=("NF", "NONE"),
                                action="store",
-                               default="NOAA_file",
+                               default="NF",
                                )
         my_parser.add_argument('-t', '--tolerance',
                                default=0,
@@ -365,7 +367,7 @@ def main():
             mode = 'batch'
         data_path = args.noaa
         plot_path = args.plot
-        location = args.location
+        location_source = args.location
         missing_allowed = args.tolerance
         verbose_level = args.VERBOSE
         if not os.path.exists(data_path):
@@ -374,9 +376,11 @@ def main():
         if not os.path.exists(plot_path):
             print("PLOT directory", plot_path, "does not exist. Creating it.")
             os.makedirs(plot_path, exist_ok=True)
-        month_list, the_loc = get_month_list(data_path)
-        if location == "NOAA_file":
-            location = the_loc
+        month_list, location_found_in_files = get_month_list(data_path)
+        if location_source == "NF":
+            location = location_found_in_files
+        else:
+            location = "NONE"
         if mode == 'interactive':
             run_interactive(month_list, location, plot_path, missing_allowed, verbose_level)
         run_batch(month_list, location, plot_path, missing_allowed, verbose_level)
