@@ -304,7 +304,9 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
     print("Total months dropped =", total_dumped)
     print("Re-run with the -V 1 option to see which ones were dropped.")
     print("Exiting Program")
-    sys.exit(0)
+
+
+#   sys.exit(0)
 
 
 def main():
@@ -383,7 +385,8 @@ def main():
             location = "NONE"
         if mode == 'interactive':
             run_interactive(month_list, location, plot_path, missing_allowed, verbose_level)
-        run_batch(month_list, location, plot_path, missing_allowed, verbose_level)
+        else:
+            run_batch(month_list, location, plot_path, missing_allowed, verbose_level)
     except KeyboardInterrupt:
         print()
         print("Keyboard interrupt by user")
