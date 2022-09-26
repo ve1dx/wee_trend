@@ -247,27 +247,34 @@ def python_check():
         sys.exit(0)
 
 
+def common_processing(option, text_month, locn, total_df, mnth_list, month, tolerate,
+                      verbosity, incomplete, p_path):
+    heading_variable, plot_title = make_heading_title(option, text_month, locn)
+    plot_ready_df, dumped, units = process_months(total_df, mnth_list,
+                                                  heading_variable, month, tolerate, verbosity,
+                                                  incomplete)
+    x = plot_ready_df["Year"]
+    y = plot_ready_df["Mth"]
+    plot_graph(x, y, plot_title, p_path, units)
+    return dumped
+
+
 def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
     incomplete_months = []
     int_month, text_mnth = get_month()
     all_available_data_df = load_months(mnth_list)
     while True:
         month, option, text_month = menu(int_month, wtdata.menudata)
-        heading_variable, plot_title = make_heading_title(option, text_month, locn)
-        plot_ready_df, dumped, units = process_months(all_available_data_df, mnth_list,
-                                                      heading_variable, month, tolerate, verbosity,
-                                                      incomplete_months)
-        x = plot_ready_df["Year"]
-        y = plot_ready_df["Mth"]
-        plot_graph(x, y, plot_title, p_path, units)
+        common_processing(option, text_month, locn, all_available_data_df, mnth_list,
+                          month, tolerate, verbosity, incomplete_months, p_path)
 
 
 def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
+    incomplete_months = []
     print()
     print("Processing all combinations within NOAA files in batch mode. This may take a moment.")
     print()
     total_dumped = 0
-    incomplete_months = []
     all_available_data_df = load_months(mnth_list)
     if verbose_extent != 1:
         progressbar = tqdm.tqdm(total=len(wtdata.batchmonth) * len(wtdata.batchoptions))
@@ -276,12 +283,8 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
         for option in wtdata.batchoptions:
             if verbose_extent == 1:
                 print("Processing month", txt_month, flush=True)
-            heading_variable, plot_title = make_heading_title(option, txt_month, loc)
-            plot_ready_df, dumped, units = process_months(all_available_data_df, mnth_list, heading_variable,
-                                                          month, tolerate, verbose_extent, incomplete_months)
-            x = plot_ready_df["Year"]
-            y = plot_ready_df["Mth"]
-            plot_graph(x, y, plot_title, p_path, units)
+            dumped = common_processing(option, txt_month, loc, all_available_data_df, mnth_list,
+                                       month, tolerate, verbose_extent, incomplete_months, p_path)
             total_dumped = total_dumped + dumped
             if verbose_extent != 1:
                 progressbar.update()
