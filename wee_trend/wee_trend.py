@@ -45,7 +45,6 @@ def menu(int_month):
         option = get_choice("Enter your choice", lo, hi)
         if option == 11:
             int_month, text_month = get_month()
-            text_month = calendar.month_name[int_month]
             print()
             print()
             print("Switched month to", text_month)
