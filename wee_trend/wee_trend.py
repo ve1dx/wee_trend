@@ -114,23 +114,16 @@ def get_units(first_file):
     with open(first_file, "r") as temp_file:
         temp_data = temp_file.readlines()
     unit_line = temp_data[7]
-    precp_unit = unit_line[42:44]
-    if precp_unit == 'in':
-        wtdata.units[0] = wtdata.unitdata['US']["temp"]
-        wtdata.units[1] = wtdata.unitdata['US']["precip"]
-        wtdata.units[2] = wtdata.unitdata['US']["speed"]
-    elif precp_unit == 'mm':
-        wtdata.units[0] = wtdata.unitdata['METRICWX']["temp"]
-        wtdata.units[1] = wtdata.unitdata['METRICWX']["precip"]
-        wtdata.units[2] = wtdata.unitdata['METRICWX']["speed"]
-    elif precp_unit == 'cm':
-        wtdata.units[0] = wtdata.unitdata['METRIC']["temp"]
-        wtdata.units[1] = wtdata.unitdata['METRIC']["precip"]
-        wtdata.units[2] = wtdata.unitdata['METRIC']["speed"]
+    precip_unit = unit_line[42:44]
+    if precip_unit == 'in':
+        return wtdata.unitdata['US']
+    elif precip_unit == 'mm':
+        return wtdata.unitdata['METRICWX']
+    elif precip_unit == 'cm':
+        return wtdata.unitdata['METRIC']
     else:
         print("Unable to determine units. Please check NOAA files for correct format")
         sys.exit(0)
-    return
 
 
 def load_months(month_list):
@@ -164,7 +157,7 @@ def check_for_complete_month(year, month, current_month_df, miss_days):
 def process_months(all_data_df, month_list, requested_column, requested_month, tolerance,
                    verbosity, incomplete_months):
     years = sorted(set(all_data_df.index.year.to_list()))
-    get_units(month_list[0])
+    units = get_units(month_list[0])
     dropped = 0
     years_out, values_out = [], []
     for year in years:
@@ -204,13 +197,13 @@ def process_months(all_data_df, month_list, requested_column, requested_month, t
     plot_prep_df = pd.DataFrame({"int": years_out, "float": values_out})
     plot_prep_df.columns = ["Year", "Mth"]
     plot_prep_df['Mth'] = plot_prep_df['Mth'].replace(np.nan, 0.0)
-    return plot_prep_df, dropped
+    return plot_prep_df, dropped, units
 
 
-def plot_graph(xvals, yvals, title, p_path):
-    t_uts = wtdata.units[0]
-    p_uts = wtdata.units[1]
-    s_uts = wtdata.units[2]
+def plot_graph(xvals, yvals, title, p_path, units):
+    t_uts = units['temp']
+    p_uts = units['precip']
+    s_uts = units['speed']
     plt.cla()
     plt.xlabel("Year")
     if "Direction" in title:
@@ -269,12 +262,12 @@ def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
     all_available_data_df = load_months(mnth_list)
     while True:
         heading_variable, plot_title, int_month = menu(int_month, wtdata.menudata, locn)
-        plot_ready_df, dumped = process_months(all_available_data_df, mnth_list,
-                                               heading_variable, int_month, tolerate, verbosity,
-                                               incomplete_months)
+        plot_ready_df, dumped, units = process_months(all_available_data_df, mnth_list,
+                                                      heading_variable, int_month, tolerate, verbosity,
+                                                      incomplete_months)
         x = plot_ready_df["Year"]
         y = plot_ready_df["Mth"]
-        plot_graph(x, y, plot_title, p_path)
+        plot_graph(x, y, plot_title, p_path, units)
 
 
 def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
@@ -290,13 +283,13 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
             if verbose_extent == 1:
                 print("Processing month", txt_month, flush=True)
             heading_variable, plot_title = make_heading_title(option, txt_month, loc)
-            plot_ready_df, dumped = process_months(all_available_data_df, mnth_list, heading_variable,
-                                                   month, tolerate, verbose_extent, incomplete_months)
+            plot_ready_df, dumped, units = process_months(all_available_data_df, mnth_list, heading_variable,
+                                                          month, tolerate, verbose_extent, incomplete_months)
             x = plot_ready_df["Year"]
             y = plot_ready_df["Mth"]
             if verbose_extent == 0:
                 print(". ", end="", flush=True)
-            plot_graph(x, y, plot_title, p_path)
+            plot_graph(x, y, plot_title, p_path, units)
             total_dumped = total_dumped + dumped
     print()
     print()
