@@ -5,7 +5,6 @@
 
 batchmonth = list(range(1, 13))
 batchoptions = list(range(1, 11))
-units = list(range(0, 3))
 
 menudata = {
     1: {
