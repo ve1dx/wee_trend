@@ -24,12 +24,13 @@ Use wee_trend --help for more info
 On non-weew implementations, create a directory for the NOAA files. This directory  needs to have monthly weewx generated NOAA files. On weewx installs this already exists, usually in /var/www/html/weewx/NOAA
 
 
-Python libraries required:
+Python libraries required (install with 'pip install <library_name>':
 
 pandas
 numpy
 scipy
 matplotlib
+tqdm
 
 
 

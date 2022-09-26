@@ -16,6 +16,7 @@ import os
 import pandas as pd
 import scipy.stats
 import sys
+import tqdm
 
 matplotlib.use("Agg")
 
@@ -277,6 +278,7 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
     total_dumped = 0
     incomplete_months = []
     all_available_data_df = load_months(mnth_list)
+    progressbar = tqdm.tqdm(total=len(wtdata.batchmonth) * len(wtdata.batchoptions))
     for month in wtdata.batchmonth:
         txt_month = calendar.month_name[month]
         for option in wtdata.batchoptions:
@@ -287,10 +289,10 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
                                                           month, tolerate, verbose_extent, incomplete_months)
             x = plot_ready_df["Year"]
             y = plot_ready_df["Mth"]
-            if verbose_extent == 0:
-                print(". ", end="", flush=True)
             plot_graph(x, y, plot_title, p_path, units)
             total_dumped = total_dumped + dumped
+            progressbar.update()
+    progressbar.close()
     print()
     print()
     print("All combinations plotted")
