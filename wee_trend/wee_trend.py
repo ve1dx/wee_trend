@@ -35,7 +35,7 @@ def get_choice(prompt, lo, hi):
         return choice
 
 
-def menu(int_month, men_data, loc):
+def menu(int_month, men_data):
     text_month = calendar.month_name[int_month]
     lo, hi = 1, 12
     print()
@@ -45,15 +45,18 @@ def menu(int_month, men_data, loc):
         option = get_choice("Enter your choice", lo, hi)
         if option == 11:
             int_month, text_month = get_month()
-            option11(int_month)
+            text_month = calendar.month_name[int_month]
+            print()
+            print()
+            print("Switched month to", text_month)
         else:
             break
     if option == 12:
         print()
         print("Exiting program.")
         sys.exit(0)
-    heading, title = option_1_10(option, text_month, men_data, loc)
-    return heading, title, int_month
+    print(men_data[option]["description"], "being processed")
+    return int_month, option, text_month
 
 
 def print_menu(i_mnth, men_data):
@@ -61,19 +64,6 @@ def print_menu(i_mnth, men_data):
     print(text_mnth, "selected")
     for key in men_data:
         print(key, "--", men_data[key]["description"])
-
-
-def option11(i_mnth):
-    text_month = calendar.month_name[i_mnth]
-    print()
-    print()
-    print("Switched month to", text_month, flush=True)
-
-
-def option_1_10(number, txt_month, men_data, loc):
-    print(men_data[number]["description"], "being processed")
-    head, title = make_heading_title(number, txt_month, loc)
-    return head, title
 
 
 def make_heading_title(number, txt_month, locn):
@@ -173,7 +163,7 @@ def process_months(all_data_df, month_list, requested_column, requested_month, t
                     print("Working on month", test_month, flush=True)
                     print("Tolerance for missing days is", tolerance, flush=True)
                     print("Data for {}-{:02d} incomplete, dropping it".format(year, requested_month), flush=True)
-                    print("Number of", calendar.month_name[requested_month], "months dropped =", dropped)
+                    print("Number of", calendar.month_name[requested_month], "months dropped =", dropped, flush=True)
             continue
         # Only the temperature range is a calculated value. The rest are
         # extracted from the specified month's dataframe.
@@ -262,9 +252,10 @@ def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
     int_month, text_mnth = get_month()
     all_available_data_df = load_months(mnth_list)
     while True:
-        heading_variable, plot_title, int_month = menu(int_month, wtdata.menudata, locn)
+        month, option, text_month = menu(int_month, wtdata.menudata)
+        heading_variable, plot_title = make_heading_title(option, text_month, locn)
         plot_ready_df, dumped, units = process_months(all_available_data_df, mnth_list,
-                                                      heading_variable, int_month, tolerate, verbosity,
+                                                      heading_variable, month, tolerate, verbosity,
                                                       incomplete_months)
         x = plot_ready_df["Year"]
         y = plot_ready_df["Mth"]
@@ -278,7 +269,8 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
     total_dumped = 0
     incomplete_months = []
     all_available_data_df = load_months(mnth_list)
-    progressbar = tqdm.tqdm(total=len(wtdata.batchmonth) * len(wtdata.batchoptions))
+    if verbose_extent != 1:
+        progressbar = tqdm.tqdm(total=len(wtdata.batchmonth) * len(wtdata.batchoptions))
     for month in wtdata.batchmonth:
         txt_month = calendar.month_name[month]
         for option in wtdata.batchoptions:
@@ -291,8 +283,10 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
             y = plot_ready_df["Mth"]
             plot_graph(x, y, plot_title, p_path, units)
             total_dumped = total_dumped + dumped
-            progressbar.update()
-    progressbar.close()
+            if verbose_extent != 1:
+                progressbar.update()
+    if verbose_extent != 1:
+        progressbar.close()
     print()
     print()
     print("All combinations plotted")
