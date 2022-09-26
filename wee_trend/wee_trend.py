@@ -202,11 +202,30 @@ def process_months(all_data_df, month_list, requested_column, requested_month, t
 
 
 def plot_graph(xvals, yvals, title, p_path, units):
+    #
+    # Green as color for points
+    #
+    plt.plot(xvals, yvals, "o", color="green")
+    #
+    # Obtain m (slope) and b (intercept) of linear regression line
+    #
+    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(xvals, yvals)
+    r_sq = r_value ** 2
+    #
+    # Add a red coloured linear regression line
+    #
+    plt.annotate(
+        "R\u00b2 = {:.2f}".format(r_sq), xy=(np.median(xvals), np.median(yvals))
+    )
+    plt.plot(xvals, slope * xvals + intercept, color="red")
+    #
+    # Title & labels
+    #
+    plt.title(title)
+    plt.xlabel("Year")
     t_uts = units['temp']
     p_uts = units['precip']
     s_uts = units['speed']
-    plt.cla()
-    plt.xlabel("Year")
     if "Direction" in title:
         plt.ylabel("Direction")
     elif "Precipitation" in title:
@@ -218,30 +237,11 @@ def plot_graph(xvals, yvals, title, p_path, units):
     else:
         plt.ylabel("Temp " + t_uts)
     #
-    # Green as color for points
+    # Save the figure
     #
-    plt.plot(xvals, yvals, "o", color="green")
-    #
-    # Add a title
-    #
-    plt.title(title)
-    plt.scatter(xvals, yvals)
-    #
-    # Obtain m (slope) and b(intercept) of linear regression line
-    #
-    slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(xvals, yvals)
-    r_sq = r_value ** 2
-    #
-    # Add a red coloured linear regression line
-    #
-    plt.annotate(
-        "R\u00b2 = {:.2f}".format(r_sq), xy=(np.median(xvals), np.median(yvals))
-    )
-    plt.plot(xvals, slope * xvals + intercept, color="red")
     underscored_name = title.replace(",", "").replace("- ", "").replace(" ", "_")
     plot_save = os.path.join(p_path, underscored_name)
     plt.savefig(plot_save)
-    plt.clf()
     plt.close()
 
 
