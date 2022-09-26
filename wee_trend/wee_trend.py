@@ -35,13 +35,13 @@ def get_choice(prompt, lo, hi):
         return choice
 
 
-def menu(int_month, men_data):
+def menu(int_month):
     text_month = calendar.month_name[int_month]
     lo, hi = 1, 12
     print()
     print()
     while True:
-        print_menu(int_month, men_data)
+        print_menu(int_month, wtdata.menudata)
         option = get_choice("Enter your choice", lo, hi)
         if option == 11:
             int_month, text_month = get_month()
@@ -55,7 +55,7 @@ def menu(int_month, men_data):
         print()
         print("Exiting program.")
         sys.exit(0)
-    print(men_data[option]["description"], "being processed")
+    print(wtdata.menudata[option]["description"], "being processed")
     return int_month, option, text_month
 
 
@@ -264,7 +264,7 @@ def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
     int_month, text_mnth = get_month()
     all_available_data_df = load_months(mnth_list)
     while True:
-        month, option, text_month = menu(int_month, wtdata.menudata)
+        month, option, text_month = menu(int_month)
         common_processing(option, text_month, locn, all_available_data_df, mnth_list,
                           month, tolerate, verbosity, incomplete_months, p_path)
 
@@ -296,9 +296,6 @@ def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
     print("Total months dropped =", total_dumped)
     print("Re-run with the -V 1 option to see which ones were dropped.")
     print("Exiting Program")
-
-
-#   sys.exit(0)
 
 
 def main():
