@@ -1,4 +1,4 @@
-from pathlib import Path
+
 from setuptools import setup, find_packages
 
 with open('README.md') as f:
@@ -13,7 +13,7 @@ setup(
     include_package_data=True,
     packages=find_packages(),
     url='https://github.com/ve1dx/weather_trend',
-    entry_points = {
-    'console_scripts': ['wee_trend=wee_trend.wee_trend:main'],
+    entry_points={
+        'console_scripts': ['wee_trend=wee_trend.wee_trend:main'],
     },
 )
