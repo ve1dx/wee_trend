@@ -58,31 +58,31 @@ def menu(int_month):
     return int_month, option, text_month
 
 
-def print_menu(i_mnth, men_data):
-    text_mnth = calendar.month_name[i_mnth]
-    print(text_mnth, "selected")
+def print_menu(i_month, men_data):
+    text_month = calendar.month_name[i_month]
+    print(text_month, "selected")
     for key in men_data:
         print(key, "--", men_data[key]["description"])
 
 
-def make_heading_title(number, txt_month, locn):
-    if locn == "NONE":
+def make_heading_title(number, text_month, station_location):
+    if station_location == "NONE":
         return (
             wtdata.menudata[number]["heading"],
-            wtdata.menudata[number]["title"] + " - " + txt_month,
+            wtdata.menudata[number]["title"] + " - " + text_month,
         )
     else:
         return (
             wtdata.menudata[number]["heading"],
-            wtdata.menudata[number]["title"] + " -" + locn + " - " + txt_month,
+            wtdata.menudata[number]["title"] + " -" + station_location + " - " + text_month,
         )
 
 
 def get_month():
     lo, hi = 1, 12
-    input_mnth = get_choice("Enter month (1-12)", lo, hi)
-    m_name = calendar.month_name[input_mnth]
-    return input_mnth, m_name
+    input_month = get_choice("Enter month (1-12)", lo, hi)
+    month_name = calendar.month_name[input_month]
+    return input_month, month_name
 
 
 def get_month_list(the_path):
@@ -94,8 +94,8 @@ def get_month_list(the_path):
     master_list.sort()
     with open(master_list[0], "r") as in_file:
         data = in_file.readlines()
-        loc_line = data[3]
-        qth = loc_line.split(":")[1]
+        station_location_line = data[3]
+        qth = station_location_line.split(":")[1]
         the_qth = qth.rstrip()
     return master_list, the_qth
 
@@ -104,12 +104,12 @@ def get_units(first_file):
     with open(first_file, "r") as temp_file:
         temp_data = temp_file.readlines()
     unit_line = temp_data[7]
-    precip_unit = unit_line[42:44]
-    if precip_unit == 'in':
+    precipitation_unit = unit_line[42:44]
+    if precipitation_unit == 'in':
         return wtdata.unitdata['US']
-    elif precip_unit == 'mm':
+    elif precipitation_unit == 'mm':
         return wtdata.unitdata['METRICWX']
-    elif precip_unit == 'cm':
+    elif precipitation_unit == 'cm':
         return wtdata.unitdata['METRIC']
     else:
         print("Unable to determine units. Please check NOAA files for correct format")
@@ -122,14 +122,14 @@ def load_months(month_list):
         pathname, current_file = os.path.split(fully_qualified)
         yy = int(current_file[5:9])
         mm = int(current_file[10:12])
-        _, mnth_days = calendar.monthrange(yy, mm)
+        _, month_days = calendar.monthrange(yy, mm)
         df = pd.read_fwf(
             fully_qualified,
             names=wtdata.headings,
             header=0,
             colspecs=wtdata.colspecs,
             skiprows=12,
-            nrows=mnth_days,
+            nrows=month_days,
         )
         df['date'] = list(map(lambda d: datetime.datetime(yy, mm, d), df['DAY'].to_list()))
         dflist += [df]
@@ -137,15 +137,15 @@ def load_months(month_list):
     return dfout
 
 
-def check_for_complete_month(year, month, current_month_df, miss_days):
-    _, mnth_days = calendar.monthrange(year, month)
-    valid_days = mnth_days - miss_days
-    n_valid_days = np.sum(~current_month_df.isna().any(axis=1))
-    return n_valid_days >= valid_days
+def check_for_complete_month(year, month, current_month_df, missing_days):
+    _, month_days = calendar.monthrange(year, month)
+    valid_days = month_days - missing_days
+    number_of_valid_days = np.sum(~current_month_df.isna().any(axis=1))
+    return number_of_valid_days >= valid_days
 
 
 def process_months(all_data_df, month_list, requested_column, requested_month, tolerance,
-                   verbosity, incomplete_months):
+                   verbose_level, incomplete_months):
     years = sorted(set(all_data_df.index.year.to_list()))
     units = get_units(month_list[0])
     dropped = 0
@@ -158,7 +158,7 @@ def process_months(all_data_df, month_list, requested_column, requested_month, t
             if test_month not in incomplete_months:
                 incomplete_months.append(test_month)
                 dropped += 1
-                if verbosity == 1:
+                if verbose_level == 1:
                     print("Working on month", test_month, flush=True)
                     print("Tolerance for missing days is", tolerance, flush=True)
                     print("Data for {}-{:02d} incomplete, dropping it".format(year, requested_month), flush=True)
@@ -190,7 +190,7 @@ def process_months(all_data_df, month_list, requested_column, requested_month, t
     return plot_prep_df, dropped, units
 
 
-def plot_graph(xvals, yvals, title, p_path, units):
+def plot_graph(xvals, yvals, title, plot_path, units):
     #
     # Green as color for points
     #
@@ -212,87 +212,86 @@ def plot_graph(xvals, yvals, title, p_path, units):
     #
     plt.title(title)
     plt.xlabel("Year")
-    t_uts = units['temp']
-    p_uts = units['precip']
-    s_uts = units['speed']
+    t_units = units['temp']
+    p_units = units['precip']
+    s_units = units['speed']
     if "Direction" in title:
         plt.ylabel("Direction")
     elif "Precipitation" in title:
-        plt.ylabel(p_uts)
+        plt.ylabel(p_units)
     elif "Wind" in title:
-        plt.ylabel(s_uts)
+        plt.ylabel(s_units)
     elif "Range" in title:
-        plt.ylabel("Temp Swing " + t_uts)
+        plt.ylabel("Temp Swing " + t_units)
     else:
-        plt.ylabel("Temp " + t_uts)
+        plt.ylabel("Temp " + t_units)
     #
     # Save the figure
     #
     underscored_name = title.replace(",", "").replace("- ", "").replace(" ", "_")
-    plot_save = os.path.join(p_path, underscored_name)
+    plot_save = os.path.join(plot_path, underscored_name)
     plt.savefig(plot_save)
     plt.close()
 
 
 def python_check():
-    ver_maj = sys.version_info[0]
-    ver_min = sys.version_info[1]
-    ver_mic = sys.version_info[2]
-    if not (ver_maj == 3 and ver_min >= 5):
+    version_major = sys.version_info[0]
+    version_minor = sys.version_info[1]
+    version_micro = sys.version_info[2]
+    if not (version_major == 3 and version_minor >= 5):
         print("Python verson 3.5 or higher required to run wee_trend. This system is running Python version ",
-              ver_maj, ".", ver_min, ".", ver_mic, sep="")
+              version_major, ".", version_minor, ".", version_micro, sep="")
         print()
         print("Exiting program.")
         sys.exit(0)
 
 
-def common_processing(option, text_month, locn, total_df, mnth_list, month, tolerate,
-                      verbosity, incomplete, p_path):
-    heading_variable, plot_title = make_heading_title(option, text_month, locn)
-    plot_ready_df, dumped, units = process_months(total_df, mnth_list,
-                                                  heading_variable, month, tolerate, verbosity,
-                                                  incomplete)
+def common_processing(option, text_month, station_location, all_data_df, month_list, month, tolerance,
+                      verbose_level, incomplete, plot_path):
+    heading_variable, plot_title = make_heading_title(option, text_month, station_location)
+    plot_ready_df, dumped_months, units = process_months(all_data_df, month_list, heading_variable,
+                                                         month, tolerance, verbose_level, incomplete)
     x = plot_ready_df["Year"]
     y = plot_ready_df["Mth"]
-    plot_graph(x, y, plot_title, p_path, units)
-    return dumped
+    plot_graph(x, y, plot_title, plot_path, units)
+    return dumped_months
 
 
-def run_interactive(mnth_list, locn, p_path, tolerate, verbosity):
+def run_interactive(month_list, station_location, plot_path, tolerance, verbose_level):
     incomplete_months = []
-    int_month, text_mnth = get_month()
-    all_available_data_df = load_months(mnth_list)
+    int_month, text_month = get_month()
+    all_data_df = load_months(month_list)
     while True:
         month, option, text_month = menu(int_month)
-        common_processing(option, text_month, locn, all_available_data_df, mnth_list,
-                          month, tolerate, verbosity, incomplete_months, p_path)
+        common_processing(option, text_month, station_location, all_data_df, month_list,
+                          month, tolerance, verbose_level, incomplete_months, plot_path)
 
 
-def run_batch(mnth_list, loc, p_path, tolerate, verbose_extent):
+def run_batch(month_list, station_location, plot_path, tolerance, verbose_level):
     incomplete_months = []
     print()
     print("Processing all combinations within NOAA files in batch mode. This may take a moment.")
     print()
-    total_dumped = 0
-    all_available_data_df = load_months(mnth_list)
-    if verbose_extent != 1:
+    total_dumped_months = 0
+    all_data_df = load_months(month_list)
+    if verbose_level != 1:
         progressbar = tqdm.tqdm(total=len(wtdata.batchmonth) * len(wtdata.batchoptions))
     for month in wtdata.batchmonth:
-        txt_month = calendar.month_name[month]
+        text_month = calendar.month_name[month]
         for option in wtdata.batchoptions:
-            if verbose_extent == 1:
-                print("Processing month", txt_month, flush=True)
-            dumped = common_processing(option, txt_month, loc, all_available_data_df, mnth_list,
-                                       month, tolerate, verbose_extent, incomplete_months, p_path)
-            total_dumped = total_dumped + dumped
-            if verbose_extent != 1:
+            if verbose_level == 1:
+                print("Processing month", text_month, flush=True)
+            dumped_months = common_processing(option, text_month, station_location, all_data_df, month_list,
+                                              month, tolerance, verbose_level, incomplete_months, plot_path)
+            total_dumped_months = total_dumped_months + dumped_months
+            if verbose_level != 1:
                 progressbar.update()
-    if verbose_extent != 1:
+    if verbose_level != 1:
         progressbar.close()
     print()
     print()
     print("All combinations plotted")
-    print("Total months dropped =", total_dumped)
+    print("Total months dropped =", total_dumped_months)
     print("Re-run with the -V 1 option to see which ones were dropped.")
     print("Exiting Program")
 
@@ -326,7 +325,7 @@ def main():
                                default=plot_path,
                                )
         my_parser.add_argument('-l', '--location',
-                               help='Location for plot headings (default is NOAA files, suppress with NONE)',
+                               help='Station location for plot headings (default is from NOAA files, or ''NONE)',
                                choices=("NF", "NONE"),
                                action="store",
                                default="NF",
@@ -357,7 +356,7 @@ def main():
             mode = 'batch'
         data_path = args.noaa
         plot_path = args.plot
-        location_source = args.location
+        station_location_source = args.location
         missing_allowed = args.tolerance
         verbose_level = args.VERBOSE
         if not os.path.exists(data_path):
@@ -366,15 +365,15 @@ def main():
         if not os.path.exists(plot_path):
             print("PLOT directory", plot_path, "does not exist. Creating it.")
             os.makedirs(plot_path, exist_ok=True)
-        month_list, location_found_in_files = get_month_list(data_path)
-        if location_source == "NF":
-            location = location_found_in_files
+        month_list, station_location_from_files = get_month_list(data_path)
+        if station_location_source == "NF":
+            station_location = station_location_from_files
         else:
-            location = "NONE"
+            station_location = "NONE"
         if mode == 'interactive':
-            run_interactive(month_list, location, plot_path, missing_allowed, verbose_level)
+            run_interactive(month_list, station_location, plot_path, missing_allowed, verbose_level)
         else:
-            run_batch(month_list, location, plot_path, missing_allowed, verbose_level)
+            run_batch(month_list, station_location, plot_path, missing_allowed, verbose_level)
     except KeyboardInterrupt:
         print()
         print("Keyboard interrupt by user")
