@@ -8,65 +8,54 @@ batchoptions = list(range(1, 11))
 
 menudata = {
     1: {
-        "description": "Monthly Temperature Range",
         "heading": "TEMP_RANGE",
         "title": "Monthly Temperature Range",
     },
     2: {
-        "description": "Mean Temperature",
         "heading": "MEAN_TEMP",
-        "title": "Mean Temp",
+        "title": "Mean Temperature",
     },
     3: {
         "description": "High Temperature",
         "heading": "HIGH_TEMP",
-        "title": "High Temp",
+        "title": "High Temperature",
     },
     4: {
-        "description": "Low Temperature",
         "heading": "LOW_TEMP",
-        "title": "Low Temp",
+        "title": "Low Temperature",
     },
     5: {
-        "description": "Sum Of Heating degree days",
         "heading": "HEAT_DEG_DAYS",
         "title": "Sum of Heating Degree Days",
     },
     6: {
-        "description": "Sum Of Cooling degree days",
         "heading": "COOL_DEG_DAYS",
         "title": "Sum of Cooling Degree Days",
     },
     7: {
-        "description": "Precipitation",
         "heading": "PRECIPITATION",
         "title": "Precipitation Total",
     },
     8: {
-        "description": "Average Wind Speed",
         "heading": "AVG_WIND_SPEED",
         "title": "Average Wind Speed",
     },
     9: {
-        "description": "High Wind Gust",
         "heading": "HIGH_WIND_GUST",
         "title": "High Wind Gust",
     },
     10: {
-        "description": "Dominant Wind Direction",
         "heading": "DOMINANT_WIND_DIRECTION",
         "title": "Dominant Wind Direction",
     },
 
     11: {
-        "description": "Switch to another month",
         "heading": "N/A",
-        "title": "N/A",
+        "title": "Switch to another month",
     },
     12: {
-        "description": "Exit",
         "heading": "N/A",
-        "title": "N/A",
+        "title": "Exit",
     },
 }
 
