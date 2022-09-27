@@ -97,23 +97,17 @@ def get_month_list(the_path):
         station_location_line = data[3]
         qth = station_location_line.split(":")[1]
         the_qth = qth.rstrip()
-    return master_list, the_qth
-
-
-def get_units(first_file):
-    with open(first_file, "r") as temp_file:
-        temp_data = temp_file.readlines()
-    unit_line = temp_data[7]
-    precipitation_unit = unit_line[42:44]
-    if precipitation_unit == 'in':
-        return wtdata.unitdata['US']
-    elif precipitation_unit == 'mm':
-        return wtdata.unitdata['METRICWX']
-    elif precipitation_unit == 'cm':
-        return wtdata.unitdata['METRIC']
-    else:
-        print("Unable to determine units. Please check NOAA files for correct format")
-        sys.exit(0)
+        unit_line = data[7]
+        precipitation_unit = unit_line[42:44]
+        if precipitation_unit == 'in':
+            return master_list, the_qth, wtdata.unitdata['US']
+        elif precipitation_unit == 'mm':
+            return master_list, the_qth, wtdata.unitdata['METRICWX']
+        elif precipitation_unit == 'cm':
+            return master_list, the_qth, wtdata.unitdata['METRIC']
+        else:
+            print("Unable to determine units. Please check NOAA files for correct format")
+            sys.exit(0)
 
 
 def load_months(month_list):
@@ -144,10 +138,9 @@ def check_for_complete_month(year, month, current_month_df, missing_days):
     return number_of_valid_days >= valid_days
 
 
-def process_months(all_data_df, month_list, requested_column, requested_month, tolerance,
+def process_months(all_data_df, requested_column, requested_month, tolerance,
                    verbose_level, incomplete_months):
     years = sorted(set(all_data_df.index.year.to_list()))
-    units = get_units(month_list[0])
     dropped = 0
     years_out, values_out = [], []
     years_month_df = all_data_df[all_data_df.index.month == requested_month]  # Subset first for performance gain
@@ -188,7 +181,7 @@ def process_months(all_data_df, month_list, requested_column, requested_month, t
     plot_prep_df = pd.DataFrame({"int": years_out, "float": values_out})
     plot_prep_df.columns = ["Year", "Mth"]
     plot_prep_df['Mth'] = plot_prep_df['Mth'].replace(np.nan, 0.0)
-    return plot_prep_df, dropped, units
+    return plot_prep_df, dropped
 
 
 def plot_graph(xvals, yvals, title, plot_path, units):
@@ -247,28 +240,28 @@ def python_check():
         sys.exit(0)
 
 
-def common_processing(option, text_month, station_location, all_data_df, month_list, month, tolerance,
-                      verbose_level, incomplete, plot_path):
+def common_processing(option, text_month, station_location, all_data_df, month, tolerance,
+                      verbose_level, incomplete, plot_path, units):
     heading_variable, plot_title = make_heading_title(option, text_month, station_location)
-    plot_ready_df, dumped_months, units = process_months(all_data_df, month_list, heading_variable,
-                                                         month, tolerance, verbose_level, incomplete)
+    plot_ready_df, dumped_months = process_months(all_data_df, heading_variable,
+                                                  month, tolerance, verbose_level, incomplete)
     x = plot_ready_df["Year"]
     y = plot_ready_df["Mth"]
     plot_graph(x, y, plot_title, plot_path, units)
     return dumped_months
 
 
-def run_interactive(month_list, station_location, plot_path, tolerance, verbose_level):
+def run_interactive(month_list, station_location, plot_path, tolerance, verbose_level, units):
     incomplete_months = []
     int_month, text_month = get_month()
     all_data_df = load_months(month_list)
     while True:
         month, option, text_month = menu(int_month)
-        common_processing(option, text_month, station_location, all_data_df, month_list,
-                          month, tolerance, verbose_level, incomplete_months, plot_path)
+        common_processing(option, text_month, station_location, all_data_df, month,
+                          tolerance, verbose_level, incomplete_months, plot_path, units)
 
 
-def run_batch(month_list, station_location, plot_path, tolerance, verbose_level):
+def run_batch(month_list, station_location, plot_path, tolerance, verbose_level, units):
     incomplete_months = []
     print()
     print("Processing all combinations within NOAA files in batch mode. This may take a moment.")
@@ -282,8 +275,8 @@ def run_batch(month_list, station_location, plot_path, tolerance, verbose_level)
         for option in wtdata.batchoptions:
             if verbose_level == 1:
                 print("Processing month", text_month, flush=True)
-            dumped_months = common_processing(option, text_month, station_location, all_data_df, month_list,
-                                              month, tolerance, verbose_level, incomplete_months, plot_path)
+            dumped_months = common_processing(option, text_month, station_location, all_data_df, month,
+                                              tolerance, verbose_level, incomplete_months, plot_path, units)
             total_dumped_months = total_dumped_months + dumped_months
             if verbose_level != 1:
                 progressbar.update()
@@ -366,15 +359,15 @@ def main():
         if not os.path.exists(plot_path):
             print("PLOT directory", plot_path, "does not exist. Creating it.")
             os.makedirs(plot_path, exist_ok=True)
-        month_list, station_location_from_files = get_month_list(data_path)
+        month_list, station_location_from_files, units = get_month_list(data_path)
         if station_location_source == "NF":
             station_location = station_location_from_files
         else:
             station_location = "NONE"
         if mode == 'interactive':
-            run_interactive(month_list, station_location, plot_path, missing_allowed, verbose_level)
+            run_interactive(month_list, station_location, plot_path, missing_allowed, verbose_level, units)
         else:
-            run_batch(month_list, station_location, plot_path, missing_allowed, verbose_level)
+            run_batch(month_list, station_location, plot_path, missing_allowed, verbose_level, units)
     except KeyboardInterrupt:
         print()
         print("Keyboard interrupt by user")
