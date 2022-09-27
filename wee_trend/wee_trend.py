@@ -54,7 +54,7 @@ def menu(int_month):
         print()
         print("Exiting program.")
         sys.exit(0)
-    print(wtdata.menudata[option]["description"], "being processed")
+    print(wtdata.menudata[option]["title"], "being processed")
     return int_month, option, text_month
 
 
@@ -62,7 +62,7 @@ def print_menu(i_month, men_data):
     text_month = calendar.month_name[i_month]
     print(text_month, "selected")
     for key in men_data:
-        print(key, "--", men_data[key]["description"])
+        print(key, "--", men_data[key]["title"])
 
 
 def make_heading_title(number, text_month, station_location):
