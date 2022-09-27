@@ -150,8 +150,9 @@ def process_months(all_data_df, month_list, requested_column, requested_month, t
     units = get_units(month_list[0])
     dropped = 0
     years_out, values_out = [], []
+    years_month_df = all_data_df[all_data_df.index.month == requested_month]  # Subset first for performance gain
     for year in years:
-        month_df = all_data_df.loc[(all_data_df.index.month == requested_month) & (all_data_df.index.year == year)]
+        month_df = years_month_df.loc[years_month_df.index.year == year]  # subset down inside this loop
         should_keep = check_for_complete_month(year, requested_month, month_df, tolerance)
         test_month = '{}-{:02d}'.format(year, requested_month)
         if not should_keep:
