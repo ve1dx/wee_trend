@@ -95,16 +95,16 @@ def get_month_list(the_path):
     with open(master_list[0], "r") as in_file:
         data = in_file.readlines()
         station_location_line = data[3]
-        qth = station_location_line.split(":")[1]
-        the_qth = qth.rstrip()
+        station_location = station_location_line.split(":")[1]
+        station_location = station_location.rstrip()
         unit_line = data[7]
         precipitation_unit = unit_line[42:44]
         if precipitation_unit == 'in':
-            return master_list, the_qth, wtdata.unitdata['US']
+            return master_list, station_location, wtdata.unitdata['US']
         elif precipitation_unit == 'mm':
-            return master_list, the_qth, wtdata.unitdata['METRICWX']
+            return master_list, station_location, wtdata.unitdata['METRICWX']
         elif precipitation_unit == 'cm':
-            return master_list, the_qth, wtdata.unitdata['METRIC']
+            return master_list, station_location, wtdata.unitdata['METRIC']
         else:
             print("Unable to determine units. Please check NOAA files for correct format")
             sys.exit(0)
