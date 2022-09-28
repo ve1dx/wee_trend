@@ -140,6 +140,7 @@ def check_for_complete_month(year, month, current_month_df, missing_days):
 
 def process_months(all_data_df, requested_column, requested_month, tolerance,
                    verbose_level, incomplete_months):
+    incomplete = incomplete_months
     years = sorted(set(all_data_df.index.year.to_list()))
     dropped = 0
     years_out, values_out = [], []
@@ -149,8 +150,8 @@ def process_months(all_data_df, requested_column, requested_month, tolerance,
         should_keep = check_for_complete_month(year, requested_month, month_df, tolerance)
         test_month = '{}-{:02d}'.format(year, requested_month)
         if not should_keep:
-            if test_month not in incomplete_months:
-                incomplete_months.append(test_month)
+            if test_month not in incomplete:
+                incomplete.append(test_month)
                 dropped += 1
                 if verbose_level == 1:
                     print("Working on month", test_month, flush=True)
@@ -181,7 +182,7 @@ def process_months(all_data_df, requested_column, requested_month, tolerance,
     plot_prep_df = pd.DataFrame({"int": years_out, "float": values_out})
     plot_prep_df.columns = ["Year", "Mth"]
     plot_prep_df['Mth'] = plot_prep_df['Mth'].replace(np.nan, 0.0)
-    return plot_prep_df, dropped
+    return plot_prep_df, dropped, incomplete
 
 
 def plot_graph(xvals, yvals, title, plot_path, units):
@@ -243,12 +244,13 @@ def python_check():
 def common_processing(option, text_month, station_location, all_data_df, month, tolerance,
                       verbose_level, incomplete, plot_path, units):
     heading_variable, plot_title = make_heading_title(option, text_month, station_location)
-    plot_ready_df, dumped_months = process_months(all_data_df, heading_variable,
-                                                  month, tolerance, verbose_level, incomplete)
+    plot_ready_df, dumped_months, incomplete_months = process_months(all_data_df,
+                                                                     heading_variable,
+                                                                     month, tolerance, verbose_level, incomplete)
     x = plot_ready_df["Year"]
     y = plot_ready_df["Mth"]
     plot_graph(x, y, plot_title, plot_path, units)
-    return dumped_months
+    return dumped_months, incomplete_months
 
 
 def run_interactive(month_list, station_location, plot_path, tolerance, verbose_level, units):
@@ -275,8 +277,10 @@ def run_batch(month_list, station_location, plot_path, tolerance, verbose_level,
         for option in wtdata.batchoptions:
             if verbose_level == 1:
                 print("Processing month", text_month, flush=True)
-            dumped_months = common_processing(option, text_month, station_location, all_data_df, month,
-                                              tolerance, verbose_level, incomplete_months, plot_path, units)
+            dumped_months, incomplete = common_processing(option, text_month, station_location,
+                                                          all_data_df, month,
+                                                          tolerance, verbose_level, incomplete_months,
+                                                          plot_path, units)
             total_dumped_months = total_dumped_months + dumped_months
             if verbose_level != 1:
                 progressbar.update()
