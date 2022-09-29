@@ -135,7 +135,7 @@ def check_for_complete_month(year, month, current_month_df, missing_days):
     _, month_days = calendar.monthrange(year, month)
     valid_days = month_days - missing_days
     number_of_valid_days = np.sum(~current_month_df.isna().any(axis=1))
-    return number_of_valid_days >= valid_days
+    return number_of_valid_days >= valid_days, number_of_valid_days
 
 
 def process_months(all_data_df, requested_column, requested_month, tolerance, verbose_level):
@@ -145,14 +145,16 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
     years_month_df = all_data_df[all_data_df.index.month == requested_month]  # Subset first for performance gain
     for year in years:
         month_df = years_month_df.loc[years_month_df.index.year == year]  # subset down inside this loop
-        should_keep = check_for_complete_month(year, requested_month, month_df, tolerance)
+        should_keep, days_found = check_for_complete_month(year, requested_month, month_df, tolerance)
         if not should_keep:
             test_month = '{}-{:02d}'.format(year, requested_month)
             if verbose_level == 1:
-                print("Working on month", test_month, flush=True)
+                print("Inspecting month", test_month, flush=True)
                 print("Tolerance for missing days is", tolerance, flush=True)
+                print(test_month, ' has ', days_found, ' days of complete data', sep='')
                 print("Data for {}-{:02d} incomplete, dropping it".format(year, requested_month), flush=True)
-            incomplete |= set([test_month])
+                print()
+            incomplete |= {test_month}
             continue
         # Only the temperature range is a calculated value. The rest are
         # extracted from the specified month's dataframe.
