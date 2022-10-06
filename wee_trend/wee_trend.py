@@ -133,7 +133,7 @@ def load_months(month_list):
     return dfout
 
 
-def process_months(all_data_df, requested_column, requested_month, tolerance, verbose_level, empty_months_list):
+def process_months(all_data_df, requested_column, requested_month, tolerance, verbose_level):
     incomplete = set()
     years = sorted(set(all_data_df.index.year.to_list()))
     years_out, values_out = [], []
@@ -159,11 +159,6 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
                 print("Inspecting month", test_month, 'while preparing to process', requested_column)
                 if future:
                     print(test_month, 'is all or partially in the future. Skipping it')
-                elif test_month not in empty_months_list:
-                    empty_months_list.append(test_month)
-                    print(test_month)
-                    print(empty_months_list)
-                    print(test_month, 'has no data. Skipping it.')
                 else:
                     print("The tolerance for missing days is", tolerance, "and the number of missing days is",
                           missing_days)
@@ -194,7 +189,7 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
     plot_prep_df = pd.DataFrame({"int": years_out, "float": values_out})
     plot_prep_df.columns = ["Year", "Mth"]
     plot_prep_df['Mth'] = plot_prep_df['Mth'].replace(np.nan, 0.0)
-    return plot_prep_df, incomplete, empty_months_list,
+    return plot_prep_df, incomplete,
 
 
 def plot_graph(xvals, yvals, title, plot_path, units):
@@ -254,11 +249,10 @@ def python_check():
 
 
 def common_processing(option, text_month, station_location, all_data_df, month, tolerance,
-                      verbose_level, plot_path, units, empty_months_list):
+                      verbose_level, plot_path, units):
     heading_variable, plot_title = make_heading_title(option, text_month, station_location)
-    plot_ready_df, incomplete_months, empty_months_list = process_months(all_data_df, heading_variable,
-                                                                         month, tolerance, verbose_level,
-                                                                         empty_months_list)
+    plot_ready_df, incomplete_months = process_months(all_data_df, heading_variable,
+                                                      month, tolerance, verbose_level, )
     x = plot_ready_df["Year"]
     y = plot_ready_df["Mth"]
     plot_graph(x, y, plot_title, plot_path, units)
@@ -266,20 +260,18 @@ def common_processing(option, text_month, station_location, all_data_df, month, 
 
 
 def run_interactive(month_list, station_location, plot_path, tolerance, verbose_level, units):
-    empty_months_list = []
     int_month, text_month = get_month()
     all_data_df = load_months(month_list)
     while True:
         month, option, text_month = menu(int_month)
         _ = common_processing(option, text_month, station_location, all_data_df, month,
-                              tolerance, verbose_level, plot_path, units, empty_months_list)
+                              tolerance, verbose_level, plot_path, units)
 
 
 def run_batch(month_list, station_location, plot_path, tolerance, verbose_level, units):
     print()
     print("Processing all combinations within NOAA files in batch mode. This may take a moment.")
     print()
-    empty_months_list = []
     all_data_df = load_months(month_list)
     if verbose_level != 1:
         progressbar = tqdm.tqdm(total=len(wtdata.batchmonth) * len(wtdata.batchoptions))
@@ -288,7 +280,7 @@ def run_batch(month_list, station_location, plot_path, tolerance, verbose_level,
         for month in wtdata.batchmonth:
             text_month = calendar.month_name[month]
             incomplete_months |= common_processing(option, text_month, station_location, all_data_df, month,
-                                                   tolerance, verbose_level, plot_path, units, empty_months_list)
+                                                   tolerance, verbose_level, plot_path, units)
             if verbose_level != 1:
                 progressbar.update()
     if verbose_level != 1:
