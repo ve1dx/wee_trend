@@ -8,6 +8,7 @@ import wee_trend.wee_trenddata as wtdata
 import argparse
 import calendar
 import datetime
+from datetime import date
 import glob
 import matplotlib
 import matplotlib.pyplot as plt
@@ -138,14 +139,34 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
     years_out, values_out = [], []
     years_month_df = all_data_df[all_data_df.index.month == requested_month]  # Subset first for performance gain
     for year in years:
+        test_month = '{}-{:02d}'.format(year, requested_month)
         month_df = years_month_df.loc[years_month_df.index.year == year]  # subset down inside this loop
         missing_days = month_df[requested_column].isna().sum()  # see how many days of data are missing
-        if missing_days > tolerance:
-            test_month = '{}-{:02d}'.format(year, requested_month)
+        #       We can't process data from the future, so flag it
+        current_month = date.today().month
+        current_year = date.today().year
+        if requested_month >= current_month and current_year == year:
+            future = True
+        else:
+            future = False
+        if future and verbose_level == 1:
+            print(test_month, 'is all or partially in the future. Skipping it for ', requested_column)
+            break
+        #   Need to flag months 'empty' months. We can assume they are from the first year before the
+        #   data collection started, but this is a 'best guess' because 'empty' months might occur
+        #   for other reasons. It is the best we can do.
+        all_missing = month_df[requested_column].isna().all()
+        #        print('year, requested_month, future, all_missing', year, requested_month, future, all_missing)
+        if missing_days > tolerance or all_missing:
             if verbose_level == 1:
-                print("Inspecting month", test_month, 'while preparing to process', requested_column, flush=True)
-                print("The tolerance for missing days is", tolerance, "and the number of missing days is", missing_days, flush=True)
-                print('Data for {} incomplete and less than the tolerance, so dropping it completely for {}'.format(test_month, requested_column))
+                print("Inspecting month", test_month, 'while preparing to process', requested_column)
+                if all_missing:
+                    print(test_month, 'has no data. Skipping for', requested_column)
+                elif missing_days > tolerance:
+                    print("The tolerance for missing days is", tolerance, "and the number of missing days is",
+                          missing_days)
+                    print('Data for {} incomplete and less than the tolerance, '
+                          'so dropping it for {}'.format(test_month, requested_column))
                 print()
                 print()
             incomplete |= {test_month}
@@ -163,7 +184,7 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
         else:
             print("Can only process items specified in the menu")
             print("Exiting program with no processing")
-            sys.exit()
+            sys.exit(0)
         years_out += [year]
         values_out += [value]
 
@@ -171,7 +192,7 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
     plot_prep_df = pd.DataFrame({"int": years_out, "float": values_out})
     plot_prep_df.columns = ["Year", "Mth"]
     plot_prep_df['Mth'] = plot_prep_df['Mth'].replace(np.nan, 0.0)
-    return plot_prep_df, incomplete
+    return plot_prep_df, incomplete,
 
 
 def plot_graph(xvals, yvals, title, plot_path, units):
@@ -234,7 +255,7 @@ def common_processing(option, text_month, station_location, all_data_df, month, 
                       verbose_level, plot_path, units):
     heading_variable, plot_title = make_heading_title(option, text_month, station_location)
     plot_ready_df, incomplete_months = process_months(all_data_df, heading_variable,
-                                                      month, tolerance, verbose_level)
+                                                      month, tolerance, verbose_level, )
     x = plot_ready_df["Year"]
     y = plot_ready_df["Mth"]
     plot_graph(x, y, plot_title, plot_path, units)
@@ -265,13 +286,17 @@ def run_batch(month_list, station_location, plot_path, tolerance, verbose_level,
                                                    tolerance, verbose_level, plot_path, units)
             if verbose_level != 1:
                 progressbar.update()
-        print("Total months dropped for variable", wtdata.menudata[option]["heading"], len(incomplete_months))
     if verbose_level != 1:
         progressbar.close()
     print()
     print()
     print("All combinations plotted")
-    print("Re-run with the -V 1 option to see which ones were dropped.")
+    if verbose_level != 1:
+        combo = list(incomplete_months)
+        combo.sort()
+        print("Months not fully processed were:")
+        print(', '.join(combo))
+        print("Re-run in verbose mode with the -V 1 parameter to see why months and data column were dropped.")
     print("Exiting Program")
 
 
@@ -283,7 +308,7 @@ def main():
         my_parser = argparse.ArgumentParser(
             prog="wee_trend",
             formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=40, ), )
-        my_parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.0.0')
+        my_parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.1.0')
         group = my_parser.add_mutually_exclusive_group()
         group.add_argument('-i', '--interactive',
                            help='user interactively selects month and data to be plotted',
@@ -358,4 +383,3 @@ def main():
         print("Keyboard interrupt by user")
         print()
         print()
-
