@@ -139,6 +139,7 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
     years_out, values_out = [], []
     years_month_df = all_data_df[all_data_df.index.month == requested_month]  # Subset first for performance gain
     for year in years:
+        test_month = '{}-{:02d}'.format(year, requested_month)
         month_df = years_month_df.loc[years_month_df.index.year == year]  # subset down inside this loop
         missing_days = month_df[requested_column].isna().sum()  # see how many days of data are missing
         #       We can't process data from the future, so flag it
@@ -148,22 +149,24 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
             future = True
         else:
             future = False
+        if future and verbose_level == 1:
+            print(test_month, 'is all or partially in the future. Skipping it for ', requested_column)
+            break
         #   Need to flag months 'empty' months. We can assume they are from the first year before the
         #   data collection started, but this is a 'best guess' because 'empty' months might occur
         #   for other reasons. It is the best we can do.
         all_missing = month_df[requested_column].isna().all()
         #        print('year, requested_month, future, all_missing', year, requested_month, future, all_missing)
-        if missing_days > tolerance or future or all_missing:
-            test_month = '{}-{:02d}'.format(year, requested_month)
+        if missing_days > tolerance or all_missing:
             if verbose_level == 1:
                 print("Inspecting month", test_month, 'while preparing to process', requested_column)
-                if future:
-                    print(test_month, 'is all or partially in the future. Skipping it')
-                else:
+                if all_missing:
+                    print(test_month, 'has no data. Skipping for', requested_column)
+                elif missing_days > tolerance:
                     print("The tolerance for missing days is", tolerance, "and the number of missing days is",
                           missing_days)
                     print('Data for {} incomplete and less than the tolerance, '
-                          'so dropping it completely for {}'.format(test_month, requested_column))
+                          'so dropping it for {}'.format(test_month, requested_column))
                 print()
                 print()
             incomplete |= {test_month}
@@ -293,7 +296,7 @@ def run_batch(month_list, station_location, plot_path, tolerance, verbose_level,
         combo.sort()
         print("Months not fully processed were:")
         print(', '.join(combo))
-        print("Re-run in verbose mode with the -V 1 parameter to see which months/data column were dropped.")
+        print("Re-run in verbose mode with the -V 1 parameter to see why months and data column were dropped.")
     print("Exiting Program")
 
 
