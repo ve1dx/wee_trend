@@ -126,16 +126,10 @@ def load_months(month_list):
             nrows=month_days,
         )
         df['date'] = list(map(lambda d: datetime.datetime(yy, mm, d), df['DAY'].to_list()))
+        df['TEMP_RANGE'] = df["HIGH_TEMP"] - df["LOW_TEMP"]
         dflist += [df]
     dfout = pd.concat(dflist, ignore_index=True).set_index('date')
     return dfout
-
-
-def check_for_complete_month(year, month, current_month_df, missing_days):
-    _, month_days = calendar.monthrange(year, month)
-    valid_days = month_days - missing_days
-    number_of_valid_days = np.sum(~current_month_df.isna().any(axis=1))
-    return number_of_valid_days >= valid_days, number_of_valid_days
 
 
 def process_months(all_data_df, requested_column, requested_month, tolerance, verbose_level):
@@ -145,31 +139,29 @@ def process_months(all_data_df, requested_column, requested_month, tolerance, ve
     years_month_df = all_data_df[all_data_df.index.month == requested_month]  # Subset first for performance gain
     for year in years:
         month_df = years_month_df.loc[years_month_df.index.year == year]  # subset down inside this loop
-        should_keep, days_found = check_for_complete_month(year, requested_month, month_df, tolerance)
-        if not should_keep:
+        missing_days = month_df[requested_column].isna().sum()  # see how many days of data are missing
+        if missing_days > tolerance:
             test_month = '{}-{:02d}'.format(year, requested_month)
             if verbose_level == 1:
-                print("Inspecting month", test_month, flush=True)
-                print("Tolerance for missing days is", tolerance, flush=True)
-                print(test_month, ' has ', days_found, ' days of complete data', sep='')
-                print("Data for {}-{:02d} incomplete, dropping it".format(year, requested_month), flush=True)
+                print("Inspecting month", test_month, 'while preparing to process', requested_column, flush=True)
+                print("The tolerance for missing days is", tolerance, "and the number of missing days is", missing_days, flush=True)
+                print('Data for {} incomplete and less than the tolerance, so dropping it completely for {}'.format(test_month, requested_column))
+                print()
                 print()
             incomplete |= {test_month}
             continue
         # Only the temperature range is a calculated value. The rest are
         # extracted from the specified month's dataframe.
-        if requested_column == "TEMP_RANGE":
-            value = month_df["HIGH_TEMP"].max() - month_df["LOW_TEMP"].min()
-        elif requested_column in ["MEAN_TEMP", "AVG_WIND_SPEED", "DOMINANT_WIND_DIRECTION"]:
+        if requested_column in ["MEAN_TEMP", "AVG_WIND_SPEED", "DOMINANT_WIND_DIRECTION"]:
             value = month_df[requested_column].mean()
-        elif requested_column in ["HIGH_TEMP", "HIGH_WIND_GUST"]:
+        elif requested_column in ["TEMP_RANGE", "HIGH_TEMP", "HIGH_WIND_GUST"]:
             value = month_df[requested_column].max()
         elif requested_column in ["LOW_TEMP"]:
             value = month_df[requested_column].min()
         elif requested_column in ["HEAT_DEG_DAYS", "COOL_DEG_DAYS", "PRECIPITATION"]:
             value = month_df[requested_column].sum()
         else:
-            print("Can only process items specified in the menu.")
+            print("Can only process items specified in the menu")
             print("Exiting program with no processing")
             sys.exit()
         years_out += [year]
@@ -259,29 +251,26 @@ def run_interactive(month_list, station_location, plot_path, tolerance, verbose_
 
 
 def run_batch(month_list, station_location, plot_path, tolerance, verbose_level, units):
-    incomplete_months = set()  # empty set of incomplete months
     print()
     print("Processing all combinations within NOAA files in batch mode. This may take a moment.")
     print()
     all_data_df = load_months(month_list)
     if verbose_level != 1:
         progressbar = tqdm.tqdm(total=len(wtdata.batchmonth) * len(wtdata.batchoptions))
-    for month in wtdata.batchmonth:
-        text_month = calendar.month_name[month]
-        for option in wtdata.batchoptions:
-            if verbose_level == 1:
-                print("Processing month", text_month, flush=True)
+    for option in wtdata.batchoptions:
+        incomplete_months = set()  # empty set of incomplete months
+        for month in wtdata.batchmonth:
+            text_month = calendar.month_name[month]
             incomplete_months |= common_processing(option, text_month, station_location, all_data_df, month,
                                                    tolerance, verbose_level, plot_path, units)
             if verbose_level != 1:
                 progressbar.update()
+        print("Total months dropped for variable", wtdata.menudata[option]["heading"], len(incomplete_months))
     if verbose_level != 1:
         progressbar.close()
-    total_dumped_months = len(incomplete_months)
     print()
     print()
     print("All combinations plotted")
-    print("Total months dropped =", total_dumped_months)
     print("Re-run with the -V 1 option to see which ones were dropped.")
     print("Exiting Program")
 
